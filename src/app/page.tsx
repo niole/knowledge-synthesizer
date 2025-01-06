@@ -64,11 +64,14 @@ export default function Home() {
               </div>
             ))}
           </div>
+          <label htmlFor="source-name">New Source Name</label>
           <input
+            id="source-name"
             className="w-full flex-1 p-4 border rounded-lg"
             value={wipSourceName}
             onChange={(e) => setWipSourceName(e.target.value)}
           />
+          <label htmlFor="source">New Source Content</label>
           <textarea 
             id="source" 
             className="w-full flex-1 p-4 border rounded-lg"
