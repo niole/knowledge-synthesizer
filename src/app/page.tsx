@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import pc from "@/lib/pinecone";
+import { useEffect, useState } from "react";
+import { listIndexes, upsert, embed } from "@/lib/pinecone";
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
   const [chat, setChat] = useState<string[]>([]);
   const [wipMessage, setWipMessage] = useState<string | undefined>();
   const [wipNote, setWipNote] = useState<string | undefined>();
   const [notes, setNotes] = useState<string[]>([]);
-  const [sources, setSources] = useState<string[]>([]);
+  const [sources, setSources] = useState<{name: string, source: string}[]>([]);
   const [wipSource, setWipSource] = useState<string | undefined>();
+  const [wipSourceName, setWipSourceName] = useState<string | undefined>();
+ 
+  useEffect(() => {
+    const fetchSources = async () => {
+      console.log(await listIndexes());
+    };
+    fetchSources();
+  }, []);
+
   const handleSend = () => {
     if (wipMessage) {
       setChat([...chat, wipMessage]);
@@ -24,10 +34,18 @@ export default function Home() {
     }
   };
 
-  const handleSaveSource = () => {
-    if (wipSource) {
-      setSources([...sources, wipSource]);
+  const handleSaveSource = async () => {
+    if (wipSource && wipSourceName) {
+      try {
+        const embedding = await embed(wipSource);
+        await upsert([{ id: uuidv4(), values: embedding, metadata: { name: wipSourceName } }]);
+      } catch (error) {
+        console.error('Error generating embeddings:', error);
+      }
+
+      setSources([...sources, { name: wipSourceName, source: wipSource }]);
       setWipSource(undefined);
+      setWipSourceName(undefined);
     }
   };
 
@@ -40,10 +58,15 @@ export default function Home() {
           <div id="sources-display" className="flex-1 w-full p-4 border rounded-lg bg-gray-50 overflow-y-auto">
             {sources.map((source, index) => (
               <div key={index} className="mb-2">
-                <strong>{source}</strong>
+                <strong>{source.name}</strong>
               </div>
             ))}
           </div>
+          <input
+            className="w-full flex-1 p-4 border rounded-lg"
+            value={wipSourceName}
+            onChange={(e) => setWipSourceName(e.target.value)}
+          />
           <textarea 
             id="source" 
             className="w-full flex-1 p-4 border rounded-lg"
