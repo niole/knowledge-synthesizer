@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { listIndexes, upsert, embed } from "@/lib/pinecone";
+import { useState } from "react";
+import { query, upsert, embed } from "@/lib/pinecone";
 import { v4 as uuidv4 } from 'uuid';
 
 export default function Home() {
-  const [chat, setChat] = useState<string[]>([]);
+  const [chat, setChat] = useState<{role: string, content: string}[]>([]);
   const [wipMessage, setWipMessage] = useState<string | undefined>();
   const [wipNote, setWipNote] = useState<string | undefined>();
   const [notes, setNotes] = useState<string[]>([]);
@@ -13,17 +13,19 @@ export default function Home() {
   const [wipSource, setWipSource] = useState<string | undefined>();
   const [wipSourceName, setWipSourceName] = useState<string | undefined>();
  
-  useEffect(() => {
-    const fetchSources = async () => {
-      console.log(await listIndexes());
-    };
-    fetchSources();
-  }, []);
-
   const handleSend = () => {
     if (wipMessage) {
-      setChat([...chat, wipMessage]);
+      const updatedChat = [...chat, { role: "user", content: wipMessage }];
+      setChat(updatedChat);
       setWipMessage(undefined);
+
+      // TODO there is a bug here where a user could type multiple messages and the latter ones get ignored
+      const getSources = async () => {
+        // TODO: send message to db to get sources
+        const { matches } = await query(wipMessage);
+        setChat([...updatedChat, { role: "assistant", content: matches.map(match => match.metadata?.name ?? match.id).join(", ") }]);
+      };
+      getSources();
     }
   };
 
@@ -86,8 +88,8 @@ export default function Home() {
         <div className="flex flex-col gap-4">
           <div id="chat-display" className="flex-1 w-full p-4 border rounded-lg bg-gray-50 overflow-y-auto">
             {chat.map((message, index) => (
-              <div key={index} className="mb-2">
-                <strong>{message}</strong>
+              <div key={index} className={`${message.role === "user" ? "bg-blue-500 text-white" : "bg-gray-500 text-white"} mb-2 p-2 rounded-lg`}>
+                <strong>{message.role}: {message.content}</strong>
               </div>
             ))}
           </div>

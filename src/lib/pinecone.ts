@@ -35,9 +35,18 @@ type Vector = {
     id: string;
     values: number[];
     metadata?: any;
-    //sparseValues?: { indices: number[]; values: number[] };
 };
 
 export const upsert = async (vectors: Vector[]) => {
     return index.upsert(vectors);
+};
+
+export const query = async (query: string, k: number = 3) => {
+    try {
+        const vector = await embed(query);
+        return index.query({ topK: k, vector, includeMetadata: true });
+    } catch (error) {
+        console.error('Error embedding queryorquerying Pinecone:', error);
+        throw error;
+    }
 };
